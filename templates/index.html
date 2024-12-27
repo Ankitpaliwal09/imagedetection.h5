@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+    <h1>Upload an Image for Detection</h1>
+    <div class="container" id="container" name="container">
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" id="file-input" accept="image/*" required>
+            <button type="submit">Upload and Detect</button>
+        </form>
+
+        <section id="upload-section">
+        <h2>Image Preview</h2>
+        <img id="image-preview" alt="Image Preview" style="display: none;">
+        </section>
+
+
+        <section id="results-section">
+            <h2>Detection Result</h2>
+            <p id="result-text">No result yet.</p>
+        </section>
+    </div>
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+        const imagePreview = document.getElementById('image-preview');
+        const resultText = document.getElementById('result-text');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent form from refreshing the page
+
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file!');
+                return;
+            }
+
+            // Show image preview with fade-in effect
+            const reader = new FileReader();
+            reader.onload = () => {
+                imagePreview.src = reader.result;
+                imagePreview.style.display = 'block';
+                imagePreview.style.animation = 'fadeIn 1s forwards';
+            };
+            reader.readAsDataURL(file);
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Send to backend
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    resultText.textContent = `Error: ${error.error}`;
+                    resultText.style.color = 'red';
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Show results with special effects
+                resultText.textContent = `Result: ${data.result} (Confidence: ${data.confidence}%)`;
+                resultText.style.color = data.result === 'Synthetic' ? '#e74c3c' : '#2ecc71';
+                resultText.style.animation = 'slideIn 1s forwards, pulse 1.5s infinite';
+            } catch (error) {
+                resultText.textContent = 'An error occurred. Please try again.';
+                resultText.style.color = 'red';
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
